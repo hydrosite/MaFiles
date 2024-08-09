@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload and View</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 90%;
+            max-width: 900px;
+            text-align: center;
+        }
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #007BFF;
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .file-list {
+            margin-top: 20px;
+            text-align: left;
+            width: 100%;
+        }
+        .file-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        textarea, pre {
+            width: 100%;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            resize: vertical;
+            height: 200px;
+            background-color: #fff;
+            overflow: auto;
+        }
+        img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        .file-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .file-actions button {
+            background-color: #28a745;
+        }
+        .file-actions button.delete {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload and View Files</h1>
+        <input type="file" id="fileInput" multiple>
+        <button onclick="uploadFiles()">Upload</button>
+
+        <div class="file-list" id="fileList"></div>
+    </div>
+
+    <script>
+        function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+            const fileListDiv = document.getElementById('fileList');
+
+            if (files.length === 0) return;
+
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fileData = {
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        content: e.target.result
+                    };
+
+                    localStorage.setItem(file.name, JSON.stringify(fileData));
+                    displayFile(fileData);
+                };
+
+                if (file.type === 'text/plain' || file.type === 'text/html' || file.type === 'application/javascript' || file.type === 'text/css' || file.type === 'text/x-python') {
+                    reader.readAsText(file);
+                } else if (file.type === 'image/png') {
+                    reader.readAsDataURL(file);
+                } else {
+                    alert('Unsupported file type: ' + file.type);
+                }
+            }
+        }
+
+        function displayFile(fileData) {
+            const fileListDiv = document.getElementById('fileList');
+            const fileItemDiv = document.createElement('div');
+            fileItemDiv.className = 'file-item';
+
+            if (fileData.type === 'text/plain' || fileData.type === 'text/html' || fileData.type === 'application/javascript' || fileData.type === 'text/css' || fileData.type === 'text/x-python') {
+                const pre = document.createElement('pre');
+                pre.textContent = fileData.content;
+                fileItemDiv.appendChild(pre);
+            } else if (fileData.type === 'image/png') {
+                const img = document.createElement('img');
+                img.src = fileData.content;
+                fileItemDiv.appendChild(img);
+            }
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'file-actions';
+
+            const copyButton = document.createElement('button');
+            copyButton.textContent = 'Copy';
+            copyButton.onclick = () => {
+                if (fileData.type.startsWith('text/')) {
+                    navigator.clipboard.writeText(fileData.content).then(() => {
+                        alert('File content copied to clipboard.');
+                    }).catch(err => {
+                        alert('Failed to copy file content: ' + err);
+                    });
+                } else {
+                    alert('Cannot copy non-text files.');
+                }
+            };
+
+            const downloadButton = document.createElement('button');
+            downloadButton.textContent = 'Download';
+            downloadButton.onclick = () => {
+                if (fileData.type === 'image/png') {
+                    const a = document.createElement('a');
+                    a.href = fileData.content;
+                    a.download = fileData.name;
+                    a.click();
+                } else {
+                    const blob = new Blob([fileData.content], { type: fileData.type });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileData.name;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            };
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.className = 'delete';
+            deleteButton.onclick = () => {
+                localStorage.removeItem(fileData.name);
+                fileItemDiv.remove();
+            };
+
+            actionsDiv.appendChild(copyButton);
+            actionsDiv.appendChild(downloadButton);
+            actionsDiv.appendChild(deleteButton);
+
+            fileItemDiv.appendChild(actionsDiv);
+            fileListDiv.appendChild(fileItemDiv);
+        }
+
+        function loadFiles() {
+            const keys = Object.keys(localStorage);
+            for (const key of keys) {
+                const fileData = JSON.parse(localStorage.getItem(key));
+                if (fileData) {
+                    displayFile(fileData);
+                }
+            }
+        }
+
+        window.onload = loadFiles;
+    </script>
+</body>
+</html>
