@@ -103,7 +103,6 @@
         function uploadFiles() {
             const fileInput = document.getElementById('fileInput');
             const files = fileInput.files;
-            const fileListDiv = document.getElementById('fileList');
 
             if (files.length === 0) return;
 
@@ -117,13 +116,17 @@
                         content: e.target.result
                     };
 
-                    localStorage.setItem(file.name, JSON.stringify(fileData));
-                    displayFile(fileData);
+                    try {
+                        localStorage.setItem(file.name, JSON.stringify(fileData));
+                        displayFile(fileData);
+                    } catch (e) {
+                        alert("Error saving to local storage: " + e);
+                    }
                 };
 
-                if (file.type === 'text/plain' || file.type === 'text/html' || file.type === 'application/javascript' || file.type === 'text/css' || file.type === 'text/x-python') {
+                if (file.type.startsWith('text/') || file.type === 'application/javascript') {
                     reader.readAsText(file);
-                } else if (file.type === 'image/png') {
+                } else if (file.type.startsWith('image/')) {
                     reader.readAsDataURL(file);
                 } else {
                     alert('Unsupported file type: ' + file.type);
@@ -136,11 +139,11 @@
             const fileItemDiv = document.createElement('div');
             fileItemDiv.className = 'file-item';
 
-            if (fileData.type === 'text/plain' || fileData.type === 'text/html' || fileData.type === 'application/javascript' || fileData.type === 'text/css' || fileData.type === 'text/x-python') {
+            if (fileData.type.startsWith('text/') || fileData.type === 'application/javascript') {
                 const pre = document.createElement('pre');
                 pre.textContent = fileData.content;
                 fileItemDiv.appendChild(pre);
-            } else if (fileData.type === 'image/png') {
+            } else if (fileData.type.startsWith('image/')) {
                 const img = document.createElement('img');
                 img.src = fileData.content;
                 fileItemDiv.appendChild(img);
@@ -166,20 +169,13 @@
             const downloadButton = document.createElement('button');
             downloadButton.textContent = 'Download';
             downloadButton.onclick = () => {
-                if (fileData.type === 'image/png') {
-                    const a = document.createElement('a');
-                    a.href = fileData.content;
-                    a.download = fileData.name;
-                    a.click();
-                } else {
-                    const blob = new Blob([fileData.content], { type: fileData.type });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = fileData.name;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                }
+                const blob = new Blob([fileData.content], { type: fileData.type });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileData.name;
+                a.click();
+                URL.revokeObjectURL(url);
             };
 
             const deleteButton = document.createElement('button');
